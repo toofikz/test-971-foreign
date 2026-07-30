@@ -1,0 +1,31 @@
+name: Full Chain BASH_ENV Injection
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: 'PR/Issue title to process'
+        required: true
+        default: 'normal title'
+permissions:
+  contents: read
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Step 1 - Process untrusted input (common pattern)
+        run: |
+          echo "TITLE=${{ github.event.inputs.title }}" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+
+      - name: Step 3 - Check injection result
+        run: |
+          echo "=== INJECTION VERIFICATION ==="
+          echo "TITLE=$TITLE"
+          echo "BASH_ENV=$BASH_ENV"
+          echo "INJECTED_CANARY=$INJECTED_CANARY"
+          if [ "$INJECTED_CANARY" = "CODE_EXEC_FROM_INPUT_INJECTION" ]; then
+            echo "CRITICAL: Code execution achieved via input injection!"
+            echo "The BASH_ENV payload was sourced before this step."
+            echo "GITHUB_TOKEN length: ${#GITHUB_TOKEN}"
+          fi
