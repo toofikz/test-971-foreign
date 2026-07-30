@@ -1,0 +1,35 @@
+name: GITHUB_ENV Input Injection Test
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      test_input:
+        description: 'Test input value'
+        required: true
+        default: 'normal-value'
+
+jobs:
+  process-input:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Step 1 - Common pattern - reflect input into GITHUB_ENV
+        run: |
+          # This is a COMMON vulnerable pattern found in many real workflows
+          # The input is written directly to GITHUB_ENV without sanitization
+          INPUT_VALUE="${{ github.event.inputs.test_input || 'default' }}"
+          echo "PROCESSED_INPUT=$INPUT_VALUE" >> $GITHUB_ENV
+          echo "Step 1: Set PROCESSED_INPUT from workflow input"
+
+      - name: Step 2 - Check for injection
+        run: |
+          echo "PROCESSED_INPUT=$PROCESSED_INPUT"
+          echo "BASH_ENV=$BASH_ENV"
+          if [ -n "$BASH_ENV" ] && [ "$BASH_ENV" != "" ]; then
+            echo "ALERT: BASH_ENV was set via injection!"
+            if [ -f "$BASH_ENV" ]; then
+              echo "CRITICAL: BASH_ENV file exists and was sourced!"
+              echo "INJECTED_MARKER=$INJECTED_MARKER"
+            fi
+          fi
+          echo "NODE_OPTIONS=$NODE_OPTIONS"
