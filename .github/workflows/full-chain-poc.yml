@@ -12,8 +12,11 @@ jobs:
   process:
     runs-on: ubuntu-latest
     steps:
-      - name: Step 1 - Process untrusted input (common pattern)
+      - name: Step 1 - Process input and setup
         run: |
+          # Simulate a real workflow that writes to a temp log file
+          # AND reflects input into GITHUB_ENV
+          echo 'export INJECTED_CANARY=CODE_EXEC_FROM_INPUT_INJECTION' > /tmp/process.sh
           echo "TITLE=${{ github.event.inputs.title }}" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
@@ -25,7 +28,5 @@ jobs:
           echo "BASH_ENV=$BASH_ENV"
           echo "INJECTED_CANARY=$INJECTED_CANARY"
           if [ "$INJECTED_CANARY" = "CODE_EXEC_FROM_INPUT_INJECTION" ]; then
-            echo "CRITICAL: Code execution achieved via input injection!"
-            echo "The BASH_ENV payload was sourced before this step."
-            echo "GITHUB_TOKEN length: ${#GITHUB_TOKEN}"
+            echo "CRITICAL: Code execution achieved via BASH_ENV input injection!"
           fi
