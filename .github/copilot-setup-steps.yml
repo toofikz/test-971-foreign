@@ -1,3 +1,0 @@
-steps:
-  - name: Setup
-    run: echo 'Copilot agent ready'
