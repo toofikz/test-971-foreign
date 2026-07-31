@@ -1,28 +1,41 @@
-name: OIDC Token Claim Test
+name: OIDC Self-Auth Test
 on:
   workflow_dispatch:
-    inputs:
-      test_id:
-        description: 'Test identifier'
-        default: 'oidc-test-1'
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  test-oidc:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Get OIDC Token
-        id: oidc
+      - name: Get OIDC token with GitHub audience
         run: |
-          OIDC_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r '.value')
-          # Decode JWT header and payload (don't log the signature)
-          echo "=== JWT Header ==="
-          echo "$OIDC_TOKEN" | cut -d. -f1 | base64 -d 2>/dev/null | jq .
-          echo "=== JWT Claims ==="
-          echo "$OIDC_TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq .
-          echo "=== Key Claims ==="
-          echo "$OIDC_TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq '{sub, aud, iss, ref, sha, repository, repository_owner, actor, workflow, event_name, run_id}'
+          # Request with github.com audience
+          OIDC1=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://github.com" | jq -r '.value')
+          echo "=== OIDC with github.com audience ==="
+          echo "$OIDC1" | cut -d. -f2 | base64 -d 2>/dev/null | jq '{aud, iss, sub}'
+          
+          # Try to use the OIDC token as a GitHub API token
+          echo "=== API call with OIDC token ==="
+          curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $OIDC1" \
+            "https://api.github.com/user"
+          echo ""
+          
+          # Request with api.github.com audience
+          OIDC2=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.github.com" | jq -r '.value')
+          echo "=== API call with api.github.com audience ==="
+          curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $OIDC2" \
+            "https://api.github.com/user"
+          echo ""
+          
+          # Request with actions token audience
+          OIDC3=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://ActionsOIDCGateway" | jq -r '.value')
+          echo "=== API call with ActionsOIDCGateway audience ==="
+          curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $OIDC3" \
+            "https://api.github.com/user"
+          echo ""
