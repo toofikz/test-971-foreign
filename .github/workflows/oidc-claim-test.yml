@@ -1,0 +1,28 @@
+name: OIDC Token Claim Test
+on:
+  workflow_dispatch:
+    inputs:
+      test_id:
+        description: 'Test identifier'
+        default: 'oidc-test-1'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test-oidc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get OIDC Token
+        id: oidc
+        run: |
+          OIDC_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r '.value')
+          # Decode JWT header and payload (don't log the signature)
+          echo "=== JWT Header ==="
+          echo "$OIDC_TOKEN" | cut -d. -f1 | base64 -d 2>/dev/null | jq .
+          echo "=== JWT Claims ==="
+          echo "$OIDC_TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq .
+          echo "=== Key Claims ==="
+          echo "$OIDC_TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq '{sub, aud, iss, ref, sha, repository, repository_owner, actor, workflow, event_name, run_id}'
